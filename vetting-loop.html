@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NSC Tech Hub — Vetting Loop</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #141416;
+    --surface2: #1c1c20;
+    --border: rgba(255,255,255,0.07);
+    --border-hi: rgba(255,255,255,0.13);
+    --text: #e8e6df;
+    --muted: #6a6864;
+    --accent: #c8f04a;
+    --accent-dim: rgba(200,240,74,0.10);
+    --accent-mid: rgba(200,240,74,0.22);
+    --danger: #ff5c5c;
+    --danger-dim: rgba(255,92,92,0.10);
+    --warning: #f0a030;
+    --warning-dim: rgba(240,160,48,0.10);
+    --info: #50b8ff;
+    --info-dim: rgba(80,184,255,0.10);
+    --font-d: 'Syne', sans-serif;
+    --font-m: 'DM Mono', monospace;
+    --r: 8px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-m); min-height: 100vh; display: flex; flex-direction: column; font-size: 13px; }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0;
+    background: var(--bg);
+    z-index: 100;
+    gap: 16px;
+  }
+  .logo { font-family: var(--font-d); font-weight: 800; font-size: 14px; letter-spacing: 0.06em; color: var(--accent); white-space: nowrap; }
+  .logo span { color: var(--muted); font-weight: 400; }
+  .header-mid { display: flex; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+  .htab { font-family: var(--font-m); font-size: 10px; padding: 5px 13px; border-radius: 7px; cursor: pointer; border: none; background: transparent; color: var(--muted); letter-spacing: 0.04em; transition: all 0.15s; white-space: nowrap; }
+  .htab.active { background: var(--accent); color: #0d0d0f; font-weight: 500; }
+  .spec-btn { font-family: var(--font-m); font-size: 10px; padding: 6px 12px; border: 1px solid var(--border-hi); background: transparent; color: var(--muted); border-radius: var(--r); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .spec-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  .main { display: grid; grid-template-columns: 320px 1fr; flex: 1; height: calc(100vh - 54px); overflow: hidden; }
+
+  .sidebar { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .sb-head { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .sb-title { font-family: var(--font-d); font-weight: 700; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .cnt-badge { font-size: 9px; background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(200,240,74,0.2); padding: 2px 8px; border-radius: 20px; }
+  .asset-list { overflow-y: auto; flex: 1; }
+  .asset-item { padding: 13px 18px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+  .asset-item:hover { background: var(--surface); }
+  .asset-item.sel { background: var(--surface2); border-left: 2px solid var(--accent); padding-left: 16px; }
+  .a-name { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .a-meta { font-size: 10px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .pill { font-size: 9px; padding: 2px 7px; border-radius: 20px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
+  .p-incoming { background: var(--info-dim); color: var(--info); border: 1px solid rgba(80,184,255,0.2); }
+  .p-validating { background: var(--warning-dim); color: var(--warning); border: 1px solid rgba(240,160,48,0.2); }
+  .p-approved { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(200,240,74,0.2); }
+  .p-rejected { background: var(--danger-dim); color: var(--danger); border: 1px solid rgba(255,92,92,0.2); }
+  .add-btn { margin: 14px 18px; width: calc(100% - 36px); padding: 9px; background: var(--accent-dim); border: 1px dashed rgba(200,240,74,0.3); color: var(--accent); font-family: var(--font-m); font-size: 10px; border-radius: var(--r); cursor: pointer; transition: all 0.15s; letter-spacing: 0.05em; }
+  .add-btn:hover { background: var(--accent-mid); }
+
+  .detail { overflow-y: auto; padding: 26px 30px; display: flex; flex-direction: column; gap: 18px; }
+  .detail-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 10px; color: var(--muted); font-size: 11px; }
+  .empty-icon { width: 44px; height: 44px; border: 1px dashed var(--border-hi); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .d-name { font-family: var(--font-d); font-size: 19px; font-weight: 700; line-height: 1.2; }
+  .d-sub { font-size: 10px; color: var(--muted); margin-top: 6px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  .pipeline { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+  .ps { flex: 1; padding: 10px 14px; border-right: 1px solid var(--border); }
+  .ps:last-child { border-right: none; }
+  .ps.active { background: var(--accent-dim); }
+  .ps.done { background: rgba(200,240,74,0.04); }
+  .ps.fail { background: var(--danger-dim); }
+  .ps-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 3px; }
+  .ps.active .ps-lbl { color: var(--accent); }
+  .ps.fail .ps-lbl { color: var(--danger); }
+  .ps-name { font-size: 11px; font-weight: 500; }
+
+  .sec { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+  .sec-hd { padding: 11px 15px; border-bottom: 1px solid var(--border); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+  .ai-tag { color: var(--accent); font-size: 9px; }
+  .sec-bd { padding: 15px; }
+  .asset-txt { font-size: 11px; line-height: 1.9; color: var(--text); white-space: pre-wrap; max-height: 160px; overflow-y: auto; }
+
+  .ai-loading { color: var(--muted); font-size: 11px; font-style: italic; animation: pulse 1.3s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+
+  .verdict { padding: 11px 13px; border-radius: var(--r); font-size: 11px; margin-bottom: 12px; display: flex; gap: 10px; align-items: flex-start; line-height: 1.7; }
+  .v-pass { background: var(--accent-dim); border: 1px solid rgba(200,240,74,0.2); color: var(--accent); }
+  .v-fail { background: var(--danger-dim); border: 1px solid rgba(255,92,92,0.2); color: var(--danger); }
+  .v-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+  .criteria-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 7px; font-size: 11px; line-height: 1.6; }
+  .cr-icon { flex-shrink: 0; width: 16px; text-align: center; }
+  .cr-ok { color: var(--accent); }
+  .cr-fail { color: var(--danger); }
+
+  .revision-note { background: var(--surface2); border: 1px solid rgba(255,92,92,0.18); border-radius: var(--r); padding: 14px; font-size: 11px; line-height: 1.95; color: var(--text); white-space: pre-wrap; }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn { font-family: var(--font-m); font-size: 10px; padding: 8px 15px; border-radius: var(--r); cursor: pointer; border: 1px solid var(--border-hi); background: transparent; color: var(--text); transition: all 0.15s; letter-spacing: 0.03em; white-space: nowrap; }
+  .btn:hover { background: var(--surface2); }
+  .btn:disabled { opacity: 0.38; cursor: default; }
+  .btn-primary { background: var(--accent); color: #0d0d0f; border-color: var(--accent); font-weight: 500; }
+  .btn-primary:hover:not(:disabled) { background: #d4f55a; }
+  .btn-danger { border-color: rgba(255,92,92,0.3); color: var(--danger); }
+  .btn-danger:hover:not(:disabled) { background: var(--danger-dim); }
+  .btn-ghost { border-color: transparent; color: var(--muted); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border-hi); }
+
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); z-index: 200; align-items: center; justify-content: center; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border-hi); border-radius: 12px; width: 500px; max-width: 92vw; max-height: 90vh; overflow-y: auto; padding: 26px; display: flex; flex-direction: column; gap: 16px; }
+  .modal-title { font-family: var(--font-d); font-size: 15px; font-weight: 700; }
+  .modal-sub { font-size: 10px; color: var(--muted); line-height: 1.7; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .field input, .field select, .field textarea { background: var(--bg); border: 1px solid var(--border-hi); border-radius: var(--r); color: var(--text); font-family: var(--font-m); font-size: 12px; padding: 9px 11px; outline: none; transition: border-color 0.15s; resize: vertical; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+  .field select option { background: var(--surface); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+  .spec-display { background: var(--bg); border: 1px solid var(--border-hi); border-radius: var(--r); padding: 14px; font-size: 10px; line-height: 1.9; color: var(--text); white-space: pre-wrap; max-height: 420px; overflow-y: auto; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 4px; }
+
+  .notif { position: fixed; bottom: 22px; right: 22px; background: var(--surface2); border: 1px solid var(--border-hi); border-left: 3px solid var(--accent); padding: 11px 15px; border-radius: var(--r); font-size: 10px; color: var(--text); z-index: 300; transform: translateY(70px); opacity: 0; transition: all 0.28s cubic-bezier(.34,1.56,.64,1); max-width: 260px; line-height: 1.5; }
+  .notif.show { transform: translateY(0); opacity: 1; }
+  .notif.err { border-left-color: var(--danger); }
+
+  #loading-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:400; align-items:center; justify-content:center; }
+  #loading-overlay.on { display:flex; }
+  .loading-box { background:var(--surface); border:1px solid var(--border-hi); border-radius:10px; padding:20px 28px; display:flex; gap:12px; align-items:center; font-size:11px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">NSC<span> / </span>VETTING LOOP</div>
+  <div class="header-mid">
+    <button class="htab active" onclick="setFilter('all',this)">All</button>
+    <button class="htab" onclick="setFilter('incoming',this)">Incoming</button>
+    <button class="htab" onclick="setFilter('validating',this)">Validating</button>
+    <button class="htab" onclick="setFilter('approved',this)">Approved</button>
+    <button class="htab" onclick="setFilter('rejected',this)">Rejected</button>
+  </div>
+  <button class="spec-btn" onclick="openSpecModal()">View DESIGN_SPECS.md</button>
+</header>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sb-head">
+      <span class="sb-title">Asset Queue</span>
+      <span class="cnt-badge" id="cnt">0 items</span>
+    </div>
+    <div class="asset-list" id="asset-list"></div>
+    <button class="add-btn" onclick="openSubmit()">+ Submit new asset</button>
+  </div>
+  <div class="detail" id="detail">
+    <div class="detail-empty">
+      <div class="empty-icon">⌖</div>
+      <span>Select an asset to begin review</span>
+    </div>
+  </div>
+</div>
+
+<!-- SUBMIT MODAL -->
+<div class="overlay" id="submit-modal">
+  <div class="modal">
+    <div class="modal-title">Submit Asset to Incoming</div>
+    <div class="modal-sub">Assets submitted here will be checked for compliance with DESIGN_SPECS.md by the AI reviewer before reaching the dev team.</div>
+    <div class="field">
+      <label>Asset / Spec Name</label>
+      <input type="text" id="f-name" placeholder="e.g. b2t-logo-header-v01.png or Checkout Flow Spec">
+    </div>
+    <div class="field">
+      <label>Department Liaison</label>
+      <input type="text" id="f-dept" placeholder="e.g. Marketing, Product, AD Student — Jane">
+    </div>
+    <div class="field">
+      <label>Asset Type</label>
+      <select id="f-type">
+        <option value="design">Design Asset (graphic, logo, banner)</option>
+        <option value="spec">Requirement Spec</option>
+        <option value="code">Code / Commit (AD Student)</option>
+        <option value="copy">Copy / Content</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Description / Spec Content</label>
+      <textarea id="f-content" rows="6" placeholder="Describe the asset fully. Include file name, format, DPI, purpose, acceptance criteria, dependencies, commit message, etc."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModals()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAsset()">Submit to Queue →</button>
+    </div>
+  </div>
+</div>
+
+<!-- DESIGN SPECS MODAL -->
+<div class="overlay" id="spec-modal">
+  <div class="modal">
+    <div class="modal-title">DESIGN_SPECS.md</div>
+    <div class="modal-sub">The authoritative specification all assets are validated against. The AI reviewer uses this document to determine pass or fail.</div>
+    <div class="spec-display" id="spec-display"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModals()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-overlay">
+  <div class="loading-box">
+    <span class="ai-loading">↯</span>
+    <span id="loading-msg">Running…</span>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+const DESIGN_SPECS = `# DESIGN_SPECS.md — NSC Tech Hub Vetting Loop
+
+To ensure the Vetting Loop remains efficient, all assets must meet the following
+criteria before being merged into production repositories.
+
+## File Naming Conventions
+All files must follow the kebab-case format:
+
+  Format:  [project]-[asset-type]-[description]-[version].[ext]
+  Example: b2t-logo-header-v01.png
+
+Reasoning: Prevents version confusion and ensures clean indexing for the RAG system.
+
+## Asset Requirements (Design / Graphics)
+- Web Graphics: Must be exported as WebP (for performance) or SVG (for logos/icons).
+- Resolution: 72 DPI for web; 300 DPI for print-ready assets.
+- Color Space: RGB for all digital-first assets.
+
+## Code Standards (AD Students)
+- Commit Messages: Must be descriptive and link to a specific GitHub Issue ID.
+- Branching: No direct pushes to main. All code must go through a Pull Request (PR)
+  vetted by the TPM or a designated Peer Reviewer.
+
+## General Completeness Rules
+- All submissions must include: name, description, department/liaison, and purpose.
+- Specs must be actionable: each requirement describes a clear behavior or outcome.
+- Assets must not contain placeholder text (e.g. "TBD", "Lorem ipsum", "Coming soon").
+- Requirement specs must define: goal, acceptance criteria, edge cases, and dependencies.`.trim();
+
+document.getElementById('spec-display').textContent = DESIGN_SPECS;
+
+let assets = [
+  {
+    id:'demo1', name:'b2t-logo-header-v01.png', dept:'Marketing', type:'design',
+    status:'incoming', date:'2025-04-18',
+    content:'Header logo for B2T project. Exported as PNG at 72 DPI, RGB color space. File follows the naming convention. Purpose: web homepage header. Uploaded to shared Figma workspace.',
+    aiReview:null, revisionNote:null
+  },
+  {
+    id:'demo2', name:'Checkout Flow Spec', dept:'Product — Sarah M.', type:'spec',
+    status:'approved', date:'2025-04-17',
+    content:'Goal: Allow users to complete checkout in 3 steps.\nAcceptance criteria:\n- Step 1: Cart review with item list and subtotal\n- Step 2: Shipping address + payment entry\n- Step 3: Order confirmation with email notification\nEdge cases: out-of-stock items, failed payment, invalid address format.\nDependencies: Payments API v2, Address Validation Service.',
+    aiReview:{
+      pass:true,
+      summary:'Asset meets all DESIGN_SPECS requirements. Spec is actionable, acceptance criteria and edge cases are present, dependencies listed, no placeholder text.',
+      criteria:[
+        {ok:true, text:'Submission includes name, department, and stated purpose'},
+        {ok:true, text:'Acceptance criteria are specific and testable (3 distinct steps defined)'},
+        {ok:true, text:'Edge cases addressed: out-of-stock, payment failure, invalid address'},
+        {ok:true, text:'Dependencies explicitly named: Payments API v2, Address Validation Service'},
+        {ok:true, text:'No placeholder text detected'}
+      ]
+    },
+    revisionNote:null
+  },
+  {
+    id:'demo3', name:'Mobile Nav Component', dept:'Engineering', type:'code',
+    status:'rejected', date:'2025-04-16',
+    content:'New mobile navigation. Hamburger menu. Links to main sections. Colours TBD. Should look good on mobile. Will push directly to main when done.',
+    aiReview:{
+      pass:false,
+      summary:'Asset fails on 4 criteria. Must be revised before it can proceed through the Vetting Loop.',
+      criteria:[
+        {ok:false, text:'Placeholder text detected: "Colours TBD" — all details must be finalised before submission'},
+        {ok:false, text:'No acceptance criteria defined — "should look good on mobile" is not measurable or testable'},
+        {ok:false, text:'Direct push to main stated — violates branching policy; a PR is required'},
+        {ok:false, text:'No GitHub Issue ID referenced in commit message'},
+        {ok:true,  text:'Asset name and department are present'}
+      ]
+    },
+    revisionNote:`REASON FOR REVISION — Mobile Nav Component
+Returned by: TPM | Date: 2025-04-16
+
+This asset did not pass the Vetting Loop compliance check and is being returned to the Department Liaison for revision.
+
+1. PLACEHOLDER TEXT DETECTED
+   The submission contains "Colours TBD" in the asset description. Per DESIGN_SPECS.md, all details must be finalised before submission — no placeholder text is permitted.
+
+2. MISSING ACCEPTANCE CRITERIA
+   The stated outcome ("should look good on mobile") is not measurable or actionable. DESIGN_SPECS.md requires each requirement to describe a specific, testable behavior or outcome (e.g. "Hamburger menu opens within 150ms on viewport widths below 768px").
+
+3. BRANCHING POLICY VIOLATION
+   The submission states the developer intends to push directly to main. Per DESIGN_SPECS.md, all code must be submitted via a Pull Request (PR) and vetted by the TPM or a designated Peer Reviewer before merging.
+
+4. MISSING GITHUB ISSUE ID IN COMMIT MESSAGE
+   Commit messages must be descriptive and reference a specific GitHub Issue ID (e.g. "feat: add mobile hamburger nav — closes #42"). No Issue ID was provided.
+
+Required actions before resubmission:
+  ✗ Remove all placeholder text and specify final colour values
+  ✗ Write measurable, testable acceptance criteria for each requirement
+  ✗ Open a Pull Request — do not push directly to main
+  ✗ Add a GitHub Issue ID to your commit message
+
+Please resubmit through the Incoming pipeline once all items above are resolved.`
+  }
+];
+
+let currentId = null;
+let currentFilter = 'all';
+
+function renderList() {
+  const list = document.getElementById('asset-list');
+  const filtered = assets.filter(a => currentFilter === 'all' || a.status === currentFilter);
+  document.getElementById('cnt').textContent = filtered.length + ' item' + (filtered.length !== 1 ? 's' : '');
+  list.innerHTML = filtered.map(a => `
+    <div class="asset-item${a.id === currentId ? ' sel' : ''}" onclick="selectA('${a.id}')">
+      <div class="a-name">${esc(a.name)}</div>
+      <div class="a-meta">
+        <span class="pill p-${a.status}">${stageLbl(a.status)}</span>
+        <span>${esc(a.dept)}</span>
+        <span>${a.date}</span>
+      </div>
+    </div>`).join('');
+}
+
+function renderDetail() {
+  const a = assets.find(x => x.id === currentId);
+  if (!a) return;
+  const panel = document.getElementById('detail');
+
+  const stages = [{k:'incoming',l:'Stage 1',n:'Submission'},{k:'validating',l:'Stage 2',n:'Validation'},{k:'approved',l:'Stage 3',n:'Production Merge'}];
+  const ord = ['incoming','validating','approved'];
+  const idx = ord.indexOf(a.status);
+  const pipeHtml = stages.map((s,i) => {
+    let cls = (a.status==='rejected'&&i===1)?'fail':(ord.indexOf(s.k)<idx)?'done':(s.k===a.status)?'active':'';
+    return `<div class="ps ${cls}"><div class="ps-lbl">${s.l}</div><div class="ps-name">${s.n}</div></div>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <div>
+      <div class="d-name">${esc(a.name)}</div>
+      <div class="d-sub">
+        <span class="pill p-${a.status}">${stageLbl(a.status)}</span>
+        <span>${esc(a.dept)}</span>
+        <span>${typeLbl(a.type)}</span>
+        <span>${a.date}</span>
+      </div>
+    </div>
+
+    <div class="pipeline">${pipeHtml}</div>
+
+    <div class="sec">
+      <div class="sec-hd"><span>Submitted Content</span><span>${typeLbl(a.type)}</span></div>
+      <div class="sec-bd"><div class="asset-txt">${esc(a.content)}</div></div>
+    </div>
+
+    ${buildReviewSec(a)}
+    ${buildRevSec(a)}
+
+    <div class="sec">
+      <div class="sec-hd"><span>TPM Actions</span></div>
+      <div class="sec-bd"><div class="actions">${buildActions(a)}</div></div>
+    </div>
+  `;
+}
+
+function buildReviewSec(a) {
+  if (!a.aiReview) return `
+    <div class="sec">
+      <div class="sec-hd"><span>DESIGN_SPECS Compliance Review</span></div>
+      <div class="sec-bd" style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:11px;color:var(--muted)">Run AI review to check this asset against DESIGN_SPECS.md criteria.</div>
+        <button class="btn btn-primary" onclick="runReview('${a.id}')">Run AI Review</button>
+      </div>
+    </div>`;
+  const r = a.aiReview;
+  const verdHtml = r.pass
+    ? `<div class="verdict v-pass"><span class="v-icon">✓</span><div>${esc(r.summary)}</div></div>`
+    : `<div class="verdict v-fail"><span class="v-icon">✗</span><div>${esc(r.summary)}</div></div>`;
+  const crHtml = (r.criteria||[]).map(c=>`
+    <div class="criteria-row">
+      <span class="cr-icon ${c.ok?'cr-ok':'cr-fail'}">${c.ok?'✓':'✗'}</span>
+      <span style="color:${c.ok?'var(--text)':'var(--danger)'}">${esc(c.text)}</span>
+    </div>`).join('');
+  return `
+    <div class="sec">
+      <div class="sec-hd"><span>DESIGN_SPECS Compliance Review</span><span class="ai-tag">AI</span></div>
+      <div class="sec-bd">
+        ${verdHtml}
+        <div style="margin-top:8px">${crHtml}</div>
+        <div style="margin-top:12px"><button class="btn" onclick="runReview('${a.id}')">Re-run Review</button></div>
+      </div>
+    </div>`;
+}
+
+function buildRevSec(a) {
+  if (!a.aiReview || a.aiReview.pass) return '';
+  if (!a.revisionNote) return `
+    <div class="sec">
+      <div class="sec-hd"><span>Reason for Revision Note</span></div>
+      <div class="sec-bd" style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:11px;color:var(--muted)">Generate a formal note to return to the Department Liaison explaining what needs to be fixed.</div>
+        <button class="btn btn-danger" onclick="genRevision('${a.id}')">Generate Revision Note</button>
+      </div>
+    </div>`;
+  return `
+    <div class="sec">
+      <div class="sec-hd"><span>Reason for Revision Note</span><span class="ai-tag">AI</span></div>
+      <div class="sec-bd">
+        <div class="revision-note">${esc(a.revisionNote)}</div>
+        <div class="actions" style="margin-top:12px">
+          <button class="btn" onclick="copyRevision('${a.id}')">Copy to clipboard</button>
+          <button class="btn btn-danger" onclick="genRevision('${a.id}')">Regenerate</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function buildActions(a) {
+  const btns = [];
+  if (a.status==='incoming') {
+    btns.push(`<button class="btn btn-primary" onclick="runReview('${a.id}')">Run AI Review</button>`);
+    btns.push(`<button class="btn" onclick="advance('${a.id}','validating')">Move to Validation</button>`);
+  }
+  if (a.status==='validating') {
+    if (a.aiReview?.pass) btns.push(`<button class="btn btn-primary" onclick="advance('${a.id}','approved')">Approve for Production</button>`);
+    btns.push(`<button class="btn btn-danger" onclick="doReject('${a.id}')">Reject Asset</button>`);
+  }
+  if (a.status==='approved') btns.push(`<button class="btn" disabled>In approved folder — devs notified</button>`);
+  if (a.status==='rejected') {
+    if (!a.revisionNote && a.aiReview && !a.aiReview.pass) btns.push(`<button class="btn btn-danger" onclick="genRevision('${a.id}')">Generate Revision Note</button>`);
+    btns.push(`<button class="btn" onclick="advance('${a.id}','incoming')">Return to Incoming</button>`);
+  }
+  return btns.join('');
+}
+
+async function runReview(id) {
+  const a = assets.find(x=>x.id===id);
+  setLoading(true,'Running compliance review…');
+  const prompt = `You are the TPM for NSC Tech Hub. Review the following asset submission against DESIGN_SPECS.md.
+
+DESIGN_SPECS.md:
+${DESIGN_SPECS}
+
+SUBMITTED ASSET:
+Name: ${a.name}
+Department/Liaison: ${a.dept}
+Type: ${typeLbl(a.type)}
+Content:
+${a.content}
+
+Respond ONLY with a valid JSON object — no markdown, no backticks, no extra text:
+{
+  "pass": true or false,
+  "summary": "One concise sentence verdict",
+  "criteria": [
+    { "ok": true or false, "text": "Description of the specific check and what was found" }
+  ]
+}
+
+Check all criteria relevant to this asset type:
+- Design assets: file naming (kebab-case, correct [project]-[type]-[desc]-[version].[ext] format), format (WebP or SVG for web graphics), DPI (72 for web / 300 for print), color space (RGB for digital), no placeholder text.
+- Spec submissions: actionable requirements, acceptance criteria present, edge cases addressed, dependencies named, no placeholder text, purpose stated.
+- Code/commits: descriptive commit message with GitHub Issue ID, no direct push to main indicated, PR process followed.
+- All types: name present, department/liaison stated, purpose clear, no placeholder text ("TBD", "Lorem ipsum", "Coming soon", "TODO", "TBC").
+Produce 4-6 specific criteria checks.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    const data = await res.json();
+    const text = data.content.map(c=>c.text||'').join('');
+    a.aiReview = JSON.parse(text.replace(/```json|```/g,'').trim());
+    if (!a.aiReview.pass) { if(a.status!=='rejected') a.status='rejected'; notify('Asset failed review — generate a Revision Note',true); }
+    else { if(a.status==='incoming') a.status='validating'; notify('Asset passed compliance review'); }
+  } catch(e) { notify('Review error: '+e.message,true); }
+  setLoading(false); renderList(); renderDetail();
+}
+
+async function genRevision(id) {
+  const a = assets.find(x=>x.id===id);
+  setLoading(true,'Writing Reason for Revision note…');
+  const failed = (a.aiReview?.criteria||[]).filter(c=>!c.ok).map((c,i)=>`${i+1}. ${c.text}`).join('\n');
+  const prompt = `You are the TPM for NSC Tech Hub writing a formal "Reason for Revision" note to return to a Department Liaison.
+
+DESIGN_SPECS.md:
+${DESIGN_SPECS}
+
+ASSET:
+Name: ${a.name}
+Department/Liaison: ${a.dept}
+Type: ${typeLbl(a.type)}
+Submitted Content:
+${a.content}
+
+FAILED CRITERIA:
+${failed}
+
+Write a formal, professional Reason for Revision note as plain text (no markdown, no asterisks, no hashtags).
+
+Use this exact structure:
+
+REASON FOR REVISION — [Asset Name]
+Returned by: TPM | Date: ${new Date().toISOString().slice(0,10)}
+
+[One sentence: this asset did not pass the Vetting Loop compliance check.]
+
+Then for each failed criterion, write a numbered section:
+- ALL-CAPS SHORT HEADING (e.g. PLACEHOLDER TEXT DETECTED)
+- 1–2 sentences describing the specific problem found in this asset's actual content
+- 1 sentence stating what DESIGN_SPECS.md requires instead
+
+Then write:
+Required actions before resubmission:
+  ✗ [specific fix for each failed criterion]
+
+Close with one sentence telling them to resubmit through the Incoming pipeline once all items are resolved.
+
+Be specific — reference the actual words or content that failed. Firm, professional, constructive tone.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,messages:[{role:'user',content:prompt}]})
+    });
+    const data = await res.json();
+    a.revisionNote = data.content.map(c=>c.text||'').join('').trim();
+    if (a.status!=='rejected') a.status='rejected';
+    notify('Revision note generated — ready to send to liaison');
+  } catch(e) { notify('Error: '+e.message,true); }
+  setLoading(false); renderList(); renderDetail();
+}
+
+function selectA(id) { currentId=id; renderList(); renderDetail(); }
+function setFilter(f,el) { currentFilter=f; document.querySelectorAll('.htab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); renderList(); }
+function advance(id,stage) { const a=assets.find(x=>x.id===id); a.status=stage; const m={incoming:'Returned to Incoming',validating:'Moved to Validation',approved:'Approved — dev team notified'}; notify(m[stage]||'Updated'); renderList(); renderDetail(); }
+function doReject(id) { if(!confirm('Reject this asset?')) return; assets.find(x=>x.id===id).status='rejected'; notify('Asset rejected',true); renderList(); renderDetail(); }
+function copyRevision(id) { const a=assets.find(x=>x.id===id); if(a?.revisionNote) navigator.clipboard.writeText(a.revisionNote).then(()=>notify('Copied to clipboard')); }
+function openSubmit() { document.getElementById('submit-modal').classList.add('open'); }
+function openSpecModal() { document.getElementById('spec-modal').classList.add('open'); }
+function closeModals() { document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('open')); }
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeModals();}));
+function submitAsset() {
+  const name=document.getElementById('f-name').value.trim();
+  const dept=document.getElementById('f-dept').value.trim();
+  const type=document.getElementById('f-type').value;
+  const content=document.getElementById('f-content').value.trim();
+  if(!name||!content){alert('Name and content are required');return;}
+  const id='a'+Date.now();
+  assets.unshift({id,name,dept:dept||'Unknown',type,status:'incoming',date:new Date().toISOString().slice(0,10),content,aiReview:null,revisionNote:null});
+  closeModals();
+  ['f-name','f-dept','f-content'].forEach(f=>document.getElementById(f).value='');
+  currentId=id; currentFilter='all';
+  document.querySelectorAll('.htab').forEach((t,i)=>t.classList.toggle('active',i===0));
+  renderList(); renderDetail(); notify('Asset submitted to Incoming');
+}
+function setLoading(on,msg='') { const el=document.getElementById('loading-overlay'); el.classList.toggle('on',on); if(msg) document.getElementById('loading-msg').textContent=msg; }
+function stageLbl(s){return{incoming:'Incoming',validating:'Validating',approved:'Approved',rejected:'Rejected'}[s]||s;}
+function typeLbl(t){return{design:'Design Asset',spec:'Requirement Spec',code:'Code / Commit',copy:'Copy',other:'Other'}[t]||t;}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function notify(msg,err=false){const n=document.getElementById('notif');n.textContent=msg;n.classList.toggle('err',err);n.classList.add('show');setTimeout(()=>n.classList.remove('show'),3400);}
+
+renderList();
+</script>
+</body>
+</html>
